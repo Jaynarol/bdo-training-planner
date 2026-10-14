@@ -67,13 +67,21 @@
           <span class="hint" id="expHint"></span>
         </div>
 
-        <div class="field">
+        <div class="field" id="boostField">
           <div class="label-row">
             <label class="label" for="boost" data-i18n="boost"></label>
             <button type="button" class="help-btn" data-help="boost" data-i18n-aria="howToFind">?</button>
           </div>
-          <input id="boost" type="text" inputmode="decimal" autocomplete="off" placeholder="1805" />
-          <span class="hint" id="tickHint"></span>
+          <input id="boost" type="text" inputmode="decimal" autocomplete="off" placeholder="2675" />
+          <span class="hint"><span id="boostHint"></span> · <button type="button" class="link-btn" id="toTick" data-i18n="switchToTick"></button></span>
+        </div>
+
+        <div class="field" id="tickField" hidden>
+          <div class="label-row">
+            <label class="label" for="tickExp" data-i18n="tickExp"></label>
+          </div>
+          <input id="tickExp" type="text" inputmode="numeric" autocomplete="off" />
+          <span class="hint"><span id="tickHint"></span> · <button type="button" class="link-btn" id="toBoost" data-i18n="switchToBoost"></button></span>
         </div>
 
         <div class="field">
@@ -87,14 +95,10 @@
 
       <details class="advanced">
         <summary data-i18n="advanced"></summary>
-        <div class="grid">
+        <div class="grid grid-3">
           <label class="field">
-            <span class="label" data-i18n="refExp"></span>
-            <input id="refExp" type="text" inputmode="numeric" autocomplete="off" />
-          </label>
-          <label class="field">
-            <span class="label" data-i18n="refBoost"></span>
-            <input id="refBoost" type="text" inputmode="decimal" autocomplete="off" />
+            <span class="label" data-i18n="baseExp"></span>
+            <input id="baseExp" type="text" inputmode="decimal" autocomplete="off" />
           </label>
           <label class="field">
             <span class="label" data-i18n="tickMinutes"></span>
@@ -102,20 +106,46 @@
           </label>
         </div>
         <p class="note" data-i18n="formula"></p>
+
       </details>
     </section>
 
     <p class="error" id="error" role="alert" hidden></p>
 
     <section class="summary" id="summary" aria-live="polite">
-      <div class="card exp-strip">
-        <div class="exp-main">
+      <div class="top-cards">
+        <div class="card level-card">
+          <div class="level-head">
+            <span class="label" id="levelCardLabel"></span>
+            <span class="level-pct" id="levelPct">–</span>
+          </div>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progress">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="mini-stats">
+            <div class="mini">
+              <span class="mini-label" data-i18n="pctPerTick"></span>
+              <span class="mini-value" id="pctPerTick">–</span>
+            </div>
+            <div class="mini">
+              <span class="mini-label" data-i18n="pctPerHour"></span>
+              <span class="mini-value" id="pctPerHour">–</span>
+            </div>
+            <div class="mini">
+              <span class="mini-label" id="nextLevelLabel"></span>
+              <span class="mini-value" id="nextLevelTime">–</span>
+              <span class="mini-foot" id="nextLevelFoot"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card exp-card">
           <span class="label" id="expRemainingLabel"></span>
           <span class="exp-value" id="totalDelta">–</span>
-        </div>
-        <div class="exp-meta">
-          <span id="totalTicks"></span>
-          <span id="perHour"></span>
+          <div class="exp-meta">
+            <span id="totalTicks"></span>
+            <span id="perHour"></span>
+          </div>
         </div>
       </div>
 
@@ -126,7 +156,8 @@
           <div class="dur-rest" id="dur24Rest"></div>
           <dl class="dur-meta">
             <div><dt data-i18n="finishOn"></dt><dd id="dur24Finish">–</dd></div>
-            <div><dt data-i18n="total"></dt><dd id="dur24Total">–</dd></div>
+            <div><dt data-i18n="inDays"></dt><dd id="dur24Days">–</dd></div>
+            <div><dt data-i18n="totalHours"></dt><dd id="dur24Hours">–</dd></div>
           </dl>
         </article>
 
@@ -136,7 +167,8 @@
           <div class="dur-rest" id="durLimRest"></div>
           <dl class="dur-meta">
             <div><dt data-i18n="finishOn"></dt><dd id="durLimFinish">–</dd></div>
-            <div><dt data-i18n="total"></dt><dd id="durLimTotal">–</dd></div>
+            <div><dt data-i18n="inDays"></dt><dd id="durLimDays">–</dd></div>
+            <div><dt data-i18n="totalHours"></dt><dd id="durLimHours">–</dd></div>
           </dl>
         </article>
       </div>
@@ -168,7 +200,7 @@
       <p class="note" data-i18n="refNote"></p>
       <div class="table-scroll">
         <table>
-          <thead><tr><th data-i18n="thLevel"></th><th class="num">EXP Required</th></tr></thead>
+          <thead><tr><th data-i18n="thLevel"></th><th data-i18n="thStep"></th><th class="num">EXP Required</th></tr></thead>
           <tbody id="refBody"></tbody>
         </table>
       </div>
