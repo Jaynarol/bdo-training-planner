@@ -60,28 +60,27 @@
           <div class="input-group">
             <input id="currentExp" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
             <div class="seg" role="radiogroup" aria-label="EXP unit">
-              <button type="button" data-unit="exp" class="seg-btn">EXP</button>
               <button type="button" data-unit="pct" class="seg-btn">%</button>
+              <button type="button" data-unit="exp" class="seg-btn">EXP</button>
             </div>
           </div>
           <span class="hint" id="expHint"></span>
         </div>
 
-        <div class="field" id="boostField">
+        <div class="field">
           <div class="label-row">
-            <label class="label" for="boost" data-i18n="boost"></label>
+            <label class="label" for="boost" id="boostLabel"></label>
             <button type="button" class="help-btn" data-help="boost" data-i18n-aria="howToFind">?</button>
           </div>
-          <input id="boost" type="text" inputmode="decimal" autocomplete="off" placeholder="2675" />
-          <span class="hint"><span id="boostHint"></span> · <button type="button" class="link-btn" id="toTick" data-i18n="switchToTick"></button></span>
-        </div>
-
-        <div class="field" id="tickField" hidden>
-          <div class="label-row">
-            <label class="label" for="tickExp" data-i18n="tickExp"></label>
+          <div class="input-group">
+            <input id="boost" type="text" inputmode="decimal" autocomplete="off" placeholder="2675" />
+            <input id="tickExp" type="text" inputmode="numeric" autocomplete="off" hidden />
+            <div class="seg" role="radiogroup" aria-label="Boost / EXP per tick">
+              <button type="button" data-source="boost" class="seg-btn">%</button>
+              <button type="button" data-source="tick" class="seg-btn">EXP</button>
+            </div>
           </div>
-          <input id="tickExp" type="text" inputmode="numeric" autocomplete="off" />
-          <span class="hint"><span id="tickHint"></span> · <button type="button" class="link-btn" id="toBoost" data-i18n="switchToBoost"></button></span>
+          <span class="hint" id="boostHint"></span>
         </div>
 
         <div class="field">
@@ -103,6 +102,10 @@
           <label class="field">
             <span class="label" data-i18n="tickMinutes"></span>
             <input id="tickMinutes" type="text" inputmode="decimal" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="label" data-i18n="silverPerHour"></span>
+            <input id="silverPerHour" type="text" inputmode="numeric" autocomplete="off" />
           </label>
         </div>
         <p class="note" data-i18n="formula"></p>
@@ -146,6 +149,13 @@
             <span id="totalTicks"></span>
             <span id="perHour"></span>
           </div>
+          <div class="silver">
+            <span class="label" id="silverLabel"></span>
+            <div class="silver-row">
+              <span class="silver-value" id="silverValue">–</span>
+              <span class="silver-foot" id="silverFoot"></span>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -184,6 +194,7 @@
             <tr>
               <th data-i18n="thLevel"></th>
               <th class="num" data-i18n="thDelta"></th>
+              <th class="num" data-i18n="thRate"></th>
               <th class="num" data-i18n="thTime24"></th>
               <th class="num" id="thLimited"></th>
               <th class="num" id="thCumulative"></th>

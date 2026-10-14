@@ -41,13 +41,14 @@
   const DEFAULTS = {
     level: 61,
     currentExp: "0",
-    expUnit: "exp",
+    expUnit: "pct",
     boost: "2675",
     tickExp: "",
     tickSource: "boost", // "boost" = คำนวณ EXP ต่อ tick จาก Boost, "tick" = ใช้ EXP ต่อ tick ที่กรอกโดยตรง
     hoursPerDay: "10",
     baseExp: BASE_EXP,
     tickMinutes: "3",
+    silverPerHour: "1000000",
   };
 
   // ชื่อ query param สั้นๆ สำหรับลิงก์แชร์
@@ -60,6 +61,7 @@
     hoursPerDay: "h",
     baseExp: "base",
     tickMinutes: "tick",
+    silverPerHour: "silver",
   };
 
   // ---------- i18n ----------
@@ -80,11 +82,14 @@
       tickEvery: "1 tick ทุก {n} นาที",
       boostHint: "≈ {n} EXP ต่อ tick",
       tickHint: "≈ Boost (ต่อสู้) {n}%",
-      switchToTick: "กรอก EXP ต่อ tick แทน",
-      switchToBoost: "กรอก Boost แทน",
       advanced: "ตั้งค่าขั้นสูง",
       baseExp: "Base EXP ต่อ tick (Boost 0%)",
       tickMinutes: "นาทีต่อ 1 tick",
+      silverPerHour: "Silver ที่ใช้ต่อชั่วโมง",
+      silverCost: "Silver ที่ต้องใช้ (ชม. ละ {r})",
+      thRate: "ได้ต่อชม.",
+      perTickShort: "{n} / tick",
+      errSilver: "Silver ต่อชั่วโมงต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป",
       formula: "สูตร: EXP ต่อ tick = round(Base × (1 + (Boost + 100) ÷ 100)) — รวมบัฟแฝง 100% ที่ไม่แสดงในเกมให้แล้ว · แก้ Base ได้เผื่อย้ายที่เก็บเลเวล",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "จาก {b} EXP ({p}%)",
@@ -162,11 +167,14 @@
       tickEvery: "1 tick every {n} min",
       boostHint: "≈ {n} EXP per tick",
       tickHint: "≈ Combat boost {n}%",
-      switchToTick: "Enter EXP per tick instead",
-      switchToBoost: "Enter boost instead",
       advanced: "Advanced settings",
       baseExp: "Base EXP per tick (0% boost)",
       tickMinutes: "Minutes per tick",
+      silverPerHour: "Silver cost per hour",
+      silverCost: "Silver needed ({r} / hr)",
+      thRate: "Per hour",
+      perTickShort: "{n} / tick",
+      errSilver: "Silver per hour must be a number ≥ 0",
       formula: "Formula: EXP per tick = round(Base × (1 + (Boost + 100) ÷ 100)) — includes the hidden 100% buff not shown in game · change Base if you train somewhere else",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "of {b} EXP ({p}%)",
@@ -249,20 +257,21 @@
     level: $("level"),
     currentExp: $("currentExp"),
     boost: $("boost"),
-    boostField: $("boostField"),
-    tickField: $("tickField"),
-    toTick: $("toTick"),
-    toBoost: $("toBoost"),
+    boostLabel: $("boostLabel"),
+    sourceBtns: document.querySelectorAll("[data-source]"),
     tickExp: $("tickExp"),
     hoursPerDay: $("hoursPerDay"),
     baseExp: $("baseExp"),
     tickMinutes: $("tickMinutes"),
+    silverPerHour: $("silverPerHour"),
+    silverLabel: $("silverLabel"),
+    silverValue: $("silverValue"),
+    silverFoot: $("silverFoot"),
     unitBtns: document.querySelectorAll("[data-unit]"),
     langBtns: document.querySelectorAll("[data-lang]"),
     subtitle: $("subtitle"),
     expHint: $("expHint"),
     boostHint: $("boostHint"),
-    tickHint: $("tickHint"),
     tickEveryHint: $("tickEveryHint"),
     error: $("error"),
     summary: $("summary"),
@@ -544,8 +553,38 @@
     return parts.length ? parts.join(" ") : `0${u.mi}`;
   }
 
+  // สำหรับตาราง: แสดงแค่ 3 หน่วยนับจากหน่วยใหญ่สุด หน่วยที่เล็กกว่านั้นปัดทิ้ง
+  // เช่น "1 ปี 2 เดือน 3 วัน" หรือ "5 วัน 4 ชม. 3 นาที"
   function fmtDuration(totalMin, hoursPerDay, startDayOffset = 0) {
-    return fmtShort(breakdown(totalMin, hoursPerDay, startDayOffset));
+    const b = breakdown(totalMin, hoursPerDay, startDayOffset);
+    const keys = ["y", "mo", "d", "h", "mi"];
+    const first = keys.findIndex((k) => b[k] > 0);
+    if (first < 0) return fmtShort(b);
+    const out = { y: 0, mo: 0, d: 0, h: 0, mi: 0 };
+    keys.slice(first, first + 3).forEach((k) => { out[k] = b[k]; });
+    return fmtShort(out);
+  }
+
+  // ช่องในตาราง: ถ้าถูกตัดหน่วย ให้ hover ดูแบบเต็มได้
+  function durHtml(totalMin, hoursPerDay, startDayOffset = 0) {
+    const short = fmtDuration(totalMin, hoursPerDay, startDayOffset);
+    const full = fmtShort(breakdown(totalMin, hoursPerDay, startDayOffset));
+    return short === full
+      ? short
+      : `<span class="trunc" tabindex="0" title="${full}" data-short="${short}" data-full="${full}">${short}</span>`;
+  }
+
+  function fmtHoursOnly(totalMin) {
+    return `${nf.format(Math.floor(totalMin / 60))}${t("short").h}`;
+  }
+
+  // 9,759,550,000 → "9.76B"
+  function fmtCompact(n) {
+    const units = [[1e12, "T"], [1e9, "B"], [1e6, "M"], [1e3, "K"]];
+    for (const [v, u] of units) {
+      if (n >= v) return `${nf2.format(n / v)}${u}`;
+    }
+    return nf.format(Math.round(n));
   }
 
   // วัน + ชม. + นาที (ไม่แปลงเป็นเดือน/ปี)
@@ -596,6 +635,7 @@
     if (!(baseExp > 0)) errors.push(t("errBase"));
     if (!(hoursPerDay > 0 && hoursPerDay <= 24)) errors.push(t("errHours"));
     if (!(tickMinutes > 0)) errors.push(t("errTick"));
+    if (!(parseNum(state.silverPerHour) >= 0)) errors.push(t("errSilver"));
 
     let expPerTick;
     if (state.tickSource === "tick") {
@@ -720,6 +760,8 @@
       .forEach((n) => { n.textContent = "–"; });
     el.nextLevelFoot.textContent = el.dur24Rest.textContent = el.durLimRest.textContent = "";
     el.progressFill.style.width = "0%";
+    el.silverValue.textContent = "–";
+    el.silverFoot.textContent = "";
     el.tbody.innerHTML = "";
     el.tfoot.innerHTML = "";
   }
@@ -736,6 +778,8 @@
     el.thCumulative.textContent = t("thCumulative", { h: hpdLabel });
     el.tickEveryHint.textContent = t("tickEvery", { n: tickMin > 0 ? nf2.format(tickMin) : "–" });
     el.levelCardLabel.textContent = t("levelCard", { a: level, b: level + 1 });
+    const silverRateLabel = parseNum(state.silverPerHour);
+    el.silverLabel.textContent = t("silverCost", { r: silverRateLabel >= 0 ? fmtCompact(silverRateLabel) : "–" });
     el.nextLevelLabel.textContent = t("nextLevel", { n: level + 1, h: hpdLabel });
 
     if (r.firstReq) {
@@ -746,15 +790,19 @@
       el.expHint.textContent = "";
     }
 
-    el.boostField.hidden = state.tickSource === "tick";
-    el.tickField.hidden = state.tickSource !== "tick";
+    const byTick = state.tickSource === "tick";
+    el.boost.hidden = byTick;
+    el.tickExp.hidden = !byTick;
+    el.boostLabel.textContent = t(byTick ? "tickExp" : "boost");
+    el.boostLabel.htmlFor = byTick ? "tickExp" : "boost";
+    setSeg(el.sourceBtns, "source", state.tickSource);
     el.currentExp.setAttribute("aria-invalid", String(!!r.expError));
     renderRefTable();
 
     if (r.errors.length) {
       el.error.hidden = false;
       el.error.textContent = r.errors.join(" · ");
-      el.boostHint.textContent = el.tickHint.textContent = "";
+      el.boostHint.textContent = "";
       clearResults();
       return;
     }
@@ -762,8 +810,9 @@
     el.summary.classList.remove("is-empty");
 
     const perHour = (r.expPerTick * 60) / r.tickMinutes;
-    el.boostHint.textContent = t("boostHint", { n: nf.format(Math.round(r.expPerTick)) });
-    el.tickHint.textContent = t("tickHint", { n: nf2.format(r.effectiveBoost - HIDDEN_BUFF) });
+    el.boostHint.textContent = state.tickSource === "tick"
+      ? t("tickHint", { n: nf2.format(r.effectiveBoost - HIDDEN_BUFF) })
+      : t("boostHint", { n: nf.format(Math.round(r.expPerTick)) });
 
     // ความคืบหน้าในเลเวลปัจจุบัน
     const curPct = (r.currentExp / r.firstReq) * 100;
@@ -779,6 +828,12 @@
     el.totalDelta.textContent = nf.format(r.totalDelta);
     el.totalTicks.textContent = t("ticks", { n: nf.format(r.totalTicks) });
     el.perHour.textContent = t("perHour", { n: nf.format(Math.round(perHour)) });
+
+    // ค่า Silver = ชั่วโมงเทรนรวม × Silver ต่อชั่วโมง
+    const silverRate = parseNum(state.silverPerHour);
+    const silver = (r.totalMinutes / 60) * silverRate;
+    el.silverValue.textContent = fmtCompact(silver);
+    el.silverFoot.textContent = `${nf.format(Math.round(silver))} Silver`;
 
     renderDuration(el.dur24Main, el.dur24Rest, r.totalMinutes, 24);
     el.dur24Finish.textContent = df.format(new Date(Date.now() + r.totalMinutes * 60000));
@@ -800,9 +855,10 @@
         <tr>
           <td class="lv">${row.from}<span class="arrow">›</span>${row.to}</td>
           <td class="num">${nf.format(row.delta)}${row.delta !== row.req ? `<span class="sub-cell">${t("fromReq", { n: nf.format(row.req) })}</span>` : ""}</td>
-          <td class="num">${fmtDuration(row.minutes, 24, Math.floor(prevMin / 1440))}<span class="sub-cell">${row.minutes >= 1440 ? `${fmtHM(row.minutes)} · ` : ""}${t("ticks", { n: nf.format(row.ticks) })}</span></td>
-          <td class="num">${fmtDuration(row.minutes, r.hoursPerDay, Math.floor(prevMin / minPerDay))}</td>
-          <td class="num">${fmtDuration(row.cumMinutes, r.hoursPerDay)}</td>
+          <td class="num rate">+${fmtPct((perHour / row.req) * 100)}%<span class="sub-cell">${t("perTickShort", { n: `+${fmtPct((r.expPerTick / row.req) * 100)}%` })}</span></td>
+          <td class="num">${durHtml(row.minutes, 24, Math.floor(prevMin / 1440))}<span class="sub-cell">${row.minutes >= 1440 ? `${fmtHoursOnly(row.minutes)} · ` : ""}${t("ticks", { n: nf.format(row.ticks) })}</span></td>
+          <td class="num">${durHtml(row.minutes, r.hoursPerDay, Math.floor(prevMin / minPerDay))}</td>
+          <td class="num">${durHtml(row.cumMinutes, r.hoursPerDay)}</td>
         </tr>`;
       })
       .join("");
@@ -811,8 +867,9 @@
       <tr>
         <td>${t("totalRow", { a: r.level, b: MAX_LEVEL })}</td>
         <td class="num">${nf.format(r.totalDelta)}</td>
-        <td class="num">${fmtDuration(r.totalMinutes, 24)}<span class="sub-cell">${fmtHM(r.totalMinutes)}</span></td>
-        <td class="num">${fmtDuration(r.totalMinutes, r.hoursPerDay)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
+        <td class="num"></td>
+        <td class="num">${durHtml(r.totalMinutes, 24)}<span class="sub-cell">${fmtHoursOnly(r.totalMinutes)}</span></td>
+        <td class="num">${durHtml(r.totalMinutes, r.hoursPerDay)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
         <td class="num"></td>
       </tr>`;
   }
@@ -842,6 +899,7 @@
     el.hoursPerDay.value = state.hoursPerDay;
     el.baseExp.value = state.baseExp;
     el.tickMinutes.value = state.tickMinutes;
+    el.silverPerHour.value = state.silverPerHour;
     setSeg(el.unitBtns, "unit", state.expUnit);
     el.currentExp.placeholder = state.expUnit === "pct" ? "0.00" : "0";
   }
@@ -874,7 +932,7 @@
       update();
     });
 
-    ["currentExp", "hoursPerDay", "tickMinutes"].forEach((key) => {
+    ["currentExp", "hoursPerDay", "tickMinutes", "silverPerHour"].forEach((key) => {
       el[key].addEventListener("input", () => {
         state[key] = el[key].value;
         update();
@@ -906,18 +964,14 @@
     });
 
     // สลับว่าจะกรอก Boost หรือ EXP ต่อ tick (ค่าอีกฝั่งคำนวณไว้แล้ว ผลจึงไม่เปลี่ยน)
-    el.toTick.addEventListener("click", () => {
-      state.tickSource = "tick";
-      syncInputs();
-      update();
-      el.tickExp.focus();
-    });
-    el.toBoost.addEventListener("click", () => {
-      state.tickSource = "boost";
-      syncInputs();
-      update();
-      el.boost.focus();
-    });
+    el.sourceBtns.forEach((b) =>
+      b.addEventListener("click", () => {
+        if (b.dataset.source === state.tickSource) return;
+        state.tickSource = b.dataset.source;
+        syncInputs();
+        update();
+      })
+    );
 
     el.unitBtns.forEach((b) =>
       b.addEventListener("click", () => {
@@ -950,6 +1004,14 @@
     // คลิกพื้นหลังนอกกล่องเพื่อปิด
     el.helpDialog.addEventListener("click", (e) => {
       if (e.target === el.helpDialog) el.helpDialog.close();
+    });
+
+    // แตะ/คลิกเวลาที่ถูกตัดหน่วยเพื่อสลับดูแบบเต็ม (สำหรับมือถือที่ hover ไม่ได้)
+    el.tbody.parentElement.addEventListener("click", (e) => {
+      const span = e.target.closest(".trunc");
+      if (!span) return;
+      const showFull = span.textContent === span.dataset.short;
+      span.textContent = showFull ? span.dataset.full : span.dataset.short;
     });
 
     el.shareBtn.addEventListener("click", share);
