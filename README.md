@@ -2,6 +2,12 @@
 
 Static web app คำนวณเวลาเก็บเลเวล Black Desert Online ด้วย Black Spirit's Training (หุ่นฟาง) จนถึงเลเวล 75
 
+**🔗 เข้าใช้งานได้ที่ https://jaynarol.com/bdo-training-planner/**
+
+<p align="center">
+  <img src="assets/help-exp.png" alt="ตัวละคร Jayzeon (Ascentor) — หน้าต่างข้อมูลส่วนตัวในเกม" width="360" />
+</p>
+
 ไม่มี build step ไม่มี dependency — แค่ `index.html`, `style.css`, `app.js` ค่าที่กรอกเก็บใน `localStorage` ของเบราว์เซอร์
 
 ## สูตรที่ใช้
@@ -42,7 +48,7 @@ npx http-server -p 5173 -c-1 .
 เปลี่ยนปลายทางได้ด้วย `DEPLOY_REMOTE=<url> ./deploy.sh`
 
 ครั้งแรกให้ตั้ง **Settings → Pages → Source: Deploy from a branch → `gh-pages` / `(root)`**
-เว็บจะอยู่ที่ `https://jaynarol.github.io/bdo-training-planner/`
+เว็บจะอยู่ที่ https://jaynarol.com/bdo-training-planner/
 
 ---
 
