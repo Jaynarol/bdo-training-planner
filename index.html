@@ -113,6 +113,63 @@
       </details>
     </section>
 
+    <section class="card bonus-card" id="bonusCard" aria-labelledby="bonusTitle">
+      <div class="card-head">
+        <div class="head-title">
+          <h2 id="bonusTitle" data-i18n="bonusTitle"></h2>
+          <p class="card-sub" data-i18n="bonusSub"></p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="bonusOn" role="switch" />
+          <span class="switch-track" aria-hidden="true"></span>
+          <span class="switch-label" data-i18n="bonusUse"></span>
+        </label>
+      </div>
+
+      <div class="bonus-body">
+        <div class="field">
+          <div class="label-row">
+            <span class="label" data-i18n="scrollsLabel"></span>
+            <button type="button" class="help-btn" data-help="scroll" data-i18n-aria="howToFind">?</button>
+          </div>
+          <div class="scroll-grid">
+            <label class="scroll-field">
+              <span class="scroll-size">S <em>0.2%</em></span>
+              <input id="scrollS" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollSHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">M <em>1%</em></span>
+              <input id="scrollM" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollMHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">L <em>7.5%</em></span>
+              <input id="scrollL" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollLHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">XL <em>15%</em></span>
+              <input id="scrollXL" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollXLHint"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="huntExp" data-i18n="huntLabel"></label>
+            <button type="button" class="help-btn" data-help="hunt" data-i18n-aria="howToFind">?</button>
+          </div>
+          <span class="scroll-size" aria-hidden="true">&nbsp;</span>
+          <input id="huntExp" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+          <span class="hint" id="huntHint"></span>
+        </div>
+      </div>
+
+      <p class="bonus-summary" id="bonusSummary"></p>
+    </section>
+
     <p class="error" id="error" role="alert" hidden></p>
 
     <section class="summary" id="summary" aria-live="polite">
@@ -164,6 +221,7 @@
           <h3 class="dur-label" data-i18n="continuous"></h3>
           <div class="dur-main" id="dur24Main">–</div>
           <div class="dur-rest" id="dur24Rest"></div>
+          <div class="dur-save" id="dur24Save" hidden></div>
           <dl class="dur-meta">
             <div><dt data-i18n="finishOn"></dt><dd id="dur24Finish">–</dd></div>
             <div><dt data-i18n="inDays"></dt><dd id="dur24Days">–</dd></div>
@@ -175,6 +233,7 @@
           <h3 class="dur-label" id="limitedLabel"></h3>
           <div class="dur-main" id="durLimMain">–</div>
           <div class="dur-rest" id="durLimRest"></div>
+          <div class="dur-save" id="durLimSave" hidden></div>
           <dl class="dur-meta">
             <div><dt data-i18n="finishOn"></dt><dd id="durLimFinish">–</dd></div>
             <div><dt data-i18n="inDays"></dt><dd id="durLimDays">–</dd></div>

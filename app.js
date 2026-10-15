@@ -38,6 +38,17 @@
   // บัฟแฝงที่ไม่แสดงในหน้าต่างสถานะ — มีอยู่ 100% เสมอ (ในเกมเห็น 2675% แต่ได้จริงเท่า 2775%)
   const HIDDEN_BUFF = 100;
 
+  // คัมภีร์ลับต่อสู้: EXP ต่อเล่มคิดตามมาตรฐานเลเวล 66 (% ของหลอด Lv 66) — เป็นค่าคงที่ทุกเลเวล
+  const SCROLL_BASE_LEVEL = 66;
+  const SCROLL_MIN_LEVEL = 60;
+  const SCROLLS = [
+    { key: "scrollS", pct: 0.2 },
+    { key: "scrollM", pct: 1 },
+    { key: "scrollL", pct: 7.5 },
+    { key: "scrollXL", pct: 15 },
+  ];
+  const scrollExp = (s) => Math.round((EXP_TABLE[SCROLL_BASE_LEVEL] * s.pct) / 100);
+
   const DEFAULTS = {
     level: 61,
     currentExp: "0",
@@ -49,6 +60,12 @@
     baseExp: BASE_EXP,
     tickMinutes: "3",
     silverPerHour: "1000000",
+    bonusOn: true,
+    scrollS: "0",
+    scrollM: "0",
+    scrollL: "0",
+    scrollXL: "0",
+    huntExp: "0",
   };
 
   // ชื่อ query param สั้นๆ สำหรับลิงก์แชร์
@@ -62,6 +79,12 @@
     baseExp: "base",
     tickMinutes: "tick",
     silverPerHour: "silver",
+    bonusOn: "bonus",
+    scrollS: "ss",
+    scrollM: "sm",
+    scrollL: "sl",
+    scrollXL: "sxl",
+    huntExp: "hunt",
   };
 
   // ---------- i18n ----------
@@ -90,6 +113,21 @@
       thRate: "ได้ต่อชม.",
       perTickShort: "{n} / tick",
       errSilver: "Silver ต่อชั่วโมงต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป",
+      bonusTitle: "EXP เสริมรายสัปดาห์",
+      bonusSub: "คัมภีร์ลับต่อสู้และ EXP จากล่ามอนส์เตอร์ จะถูกนำไปรวมกับการเทรนหุ่นฟาง",
+      bonusUse: "นำมาคำนวณ",
+      scrollsLabel: "คัมภีร์ลับต่อสู้ที่ได้ (เล่ม / สัปดาห์)",
+      scrollExpHint: "{n} / เล่ม",
+      huntLabel: "EXP จากล่ามอนส์เตอร์ / สัปดาห์",
+      huntHint: "≈ {n} EXP",
+      bonusTotal: "รวม {n} EXP / สัปดาห์",
+      bonusEq: "เท่ากับเทรน {v}",
+      bonusPct: "+{p}% ของ Lv {lv}",
+      scrollFrom60: "คัมภีร์เริ่มนับตั้งแต่ Lv 60",
+      bonusOff: "ปิดอยู่ — ผลลัพธ์ด้านล่างคิดจากหุ่นฟางอย่างเดียว",
+      bonusEmpty: "ยังไม่ได้กรอก — ผลลัพธ์ด้านล่างคิดจากหุ่นฟางอย่างเดียว",
+      savedBy: "เร็วขึ้น {v} ด้วย EXP เสริม",
+      errBonus: "จำนวนคัมภีร์และ EXP ล่ามอนส์เตอร์ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป",
       formula: "สูตร: EXP ต่อ tick = round(Base × (1 + (Boost + 100) ÷ 100)) — รวมบัฟแฝง 100% ที่ไม่แสดงในเกมให้แล้ว · แก้ Base ได้เผื่อย้ายที่เก็บเลเวล",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "จาก {b} EXP ({p}%)",
@@ -146,6 +184,18 @@
         "ไปที่แท็บสุดท้าย (ลูกศรขึ้น) <b>เพิ่มค่าประสบการณ์ทั่วไป</b>",
         "กรอกค่าในแถว <b>ต่อสู้</b> ได้เลย (ระบบบวกบัฟแฝง 100% ที่ไม่แสดงในเกมให้เอง)",
       ],
+      helpHuntTitle: "ประมาณ EXP จากล่ามอนส์เตอร์",
+      helpHuntSteps: [
+        "เปิดหน้าต่าง <b>ข้อมูลพื้นที่ล่า</b> แล้วเลือกพื้นที่ที่ไปล่าประจำ",
+        "ดูส่วน <b>ข้อมูลมอนสเตอร์</b> — ค่าประสบการณ์ที่ได้รับ คือ EXP ต่อตัว (ยังไม่รวม Boost)",
+        "คำนวณคร่าวๆ: <b>EXP ต่อตัว × จำนวนที่กำจัดต่อสัปดาห์ × (1 + EXP Boost ÷ 100)</b> เช่น 95,264 × 10,000 ตัว × 27.75 ≈ 26.4B แล้วกรอกผลรวมลงช่องนี้",
+      ],
+      helpScrollTitle: "คัมภีร์ลับต่อสู้",
+      helpScrollSteps: [
+        "ได้จากเนื้อหา PvE และ PvP เช่น ศาลาสีดำ, กวาดล้างบอสกิลด์, แท่นบูชาแห่งเลือด — กรอกจำนวนที่ได้ต่อสัปดาห์ของแต่ละขนาด",
+        "ใช้ได้ตั้งแต่ <b>Lv 60</b> (ต้องผ่านเควส [LV.50] ก้าวข้ามขีดจำกัดของตนเอง)",
+        "EXP ต่อเล่มคิดตาม<b>มาตรฐานเลเวล 66</b> เป็นค่าคงที่: S 0.2% ≈ 92.7M · M 1% ≈ 463.6M · L 7.5% ≈ 3.48B · XL 15% ≈ 6.95B",
+      ],
       units: {
         y: () => "ปี", mo: () => "เดือน", d: () => "วัน", h: () => "ชม.", mi: () => "นาที",
       },
@@ -175,6 +225,21 @@
       thRate: "Per hour",
       perTickShort: "{n} / tick",
       errSilver: "Silver per hour must be a number ≥ 0",
+      bonusTitle: "Weekly bonus EXP",
+      bonusSub: "Combat scrolls and monster hunting EXP are added on top of scarecrow training",
+      bonusUse: "Include",
+      scrollsLabel: "Combat secret scrolls (per week)",
+      scrollExpHint: "{n} each",
+      huntLabel: "Monster hunting EXP / week",
+      huntHint: "≈ {n} EXP",
+      bonusTotal: "{n} EXP / week",
+      bonusEq: "same as {v} of training",
+      bonusPct: "+{p}% of Lv {lv}",
+      scrollFrom60: "scrolls count from Lv 60",
+      bonusOff: "Off — results below use scarecrow training only",
+      bonusEmpty: "Nothing entered — results below use scarecrow training only",
+      savedBy: "{v} faster with bonus EXP",
+      errBonus: "Scroll counts and hunting EXP must be numbers ≥ 0",
       formula: "Formula: EXP per tick = round(Base × (1 + (Boost + 100) ÷ 100)) — includes the hidden 100% buff not shown in game · change Base if you train somewhere else",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "of {b} EXP ({p}%)",
@@ -231,6 +296,18 @@
         "Open the last tab (double arrow) — <b>General EXP bonus</b>",
         "Enter the value in the <b>Combat</b> row as-is (the hidden 100% buff not shown in game is added for you)",
       ],
+      helpHuntTitle: "Estimating monster hunting EXP",
+      helpHuntSteps: [
+        "Open the <b>Hunting Ground Info</b> window and pick the spot you usually grind",
+        "Check <b>Monster Info</b> — the EXP shown is per kill (before boost)",
+        "Rough estimate: <b>EXP per kill × kills per week × (1 + EXP Boost ÷ 100)</b>, e.g. 95,264 × 10,000 kills × 27.75 ≈ 26.4B — enter the total here",
+      ],
+      helpScrollTitle: "Combat secret scrolls",
+      helpScrollSteps: [
+        "Earned from PvE and PvP content such as Black Shrine, Guild Boss sweeps, Altar of Blood — enter how many of each size you get per week",
+        "Usable from <b>Lv 60</b> (after the quest [LV.50] Surpassing Your Limits)",
+        "EXP per scroll is fixed, based on the <b>level 66 standard</b>: S 0.2% ≈ 92.7M · M 1% ≈ 463.6M · L 7.5% ≈ 3.48B · XL 15% ≈ 6.95B",
+      ],
       units: {
         y: (n) => (n === 1 ? "year" : "years"),
         mo: (n) => (n === 1 ? "month" : "months"),
@@ -264,6 +341,21 @@
     baseExp: $("baseExp"),
     tickMinutes: $("tickMinutes"),
     silverPerHour: $("silverPerHour"),
+    bonusCard: $("bonusCard"),
+    bonusOn: $("bonusOn"),
+    scrollS: $("scrollS"),
+    scrollM: $("scrollM"),
+    scrollL: $("scrollL"),
+    scrollXL: $("scrollXL"),
+    scrollSHint: $("scrollSHint"),
+    scrollMHint: $("scrollMHint"),
+    scrollLHint: $("scrollLHint"),
+    scrollXLHint: $("scrollXLHint"),
+    huntExp: $("huntExp"),
+    huntHint: $("huntHint"),
+    bonusSummary: $("bonusSummary"),
+    dur24Save: $("dur24Save"),
+    durLimSave: $("durLimSave"),
     silverLabel: $("silverLabel"),
     silverValue: $("silverValue"),
     silverFoot: $("silverFoot"),
@@ -423,6 +515,7 @@
     if (!Object.keys(out).length) return null;
     if ("level" in out) out.level = Number(out.level);
     if ("expUnit" in out && out.expUnit !== "pct") out.expUnit = "exp";
+    if ("bonusOn" in out) out.bonusOn = out.bonusOn !== "0";
     if ("tickExp" in out) out.tickSource = "tick";
     else if ("boost" in out) out.tickSource = "boost";
     return out;
@@ -433,6 +526,10 @@
     // ใส่เฉพาะค่าที่ไม่ใช่ค่าเริ่มต้น (ยกเว้นข้อมูลหลัก) เพื่อให้ลิงก์สั้น
     const always = ["level", "currentExp", "expUnit", "hoursPerDay"];
     for (const [key, param] of Object.entries(URL_KEYS)) {
+      if (key === "bonusOn") {
+        if (!state.bonusOn) params.set(param, "0");
+        continue;
+      }
       const v = String(state[key] ?? "").replace(/[,\s]/g, "");
       if (v === "") continue;
       if (key === "boost" && state.tickSource === "tick") continue;
@@ -475,6 +572,8 @@
   const HELP = {
     exp: { title: "helpExpTitle", steps: "helpExpSteps", img: "assets/help-exp.png" },
     boost: { title: "helpBoostTitle", steps: "helpBoostSteps", img: "assets/help-boost.png" },
+    scroll: { title: "helpScrollTitle", steps: "helpScrollSteps", img: "assets/help-scroll.png" },
+    hunt: { title: "helpHuntTitle", steps: "helpHuntSteps", img: "assets/help-hunt.webp" },
   };
 
   function openHelp(kind) {
@@ -619,6 +718,16 @@
   }
 
   // ---------- calculation ----------
+  // EXP เสริมต่อสัปดาห์จากคัมภีร์ลับต่อสู้ + ล่ามอนส์เตอร์ (ช่องว่าง = 0)
+  function weeklyBonus() {
+    const num = (v) => (v === "" || v == null ? 0 : parseNum(v));
+    const counts = SCROLLS.map((s) => num(state[s.key]));
+    const hunt = num(state.huntExp);
+    const valid = counts.every((c) => c >= 0) && hunt >= 0;
+    const scroll = valid ? SCROLLS.reduce((sum, s, i) => sum + counts[i] * scrollExp(s), 0) : 0;
+    return { valid, scroll, hunt: valid ? hunt : 0, total: scroll + (valid ? hunt : 0) };
+  }
+
   function compute() {
     const level = Number(state.level);
     const hoursPerDay = parseNum(state.hoursPerDay);
@@ -627,6 +736,7 @@
     const boost = parseNum(state.boost);
     const hidden = hiddenValue();
     const expInput = state.currentExp === "" ? 0 : parseNum(state.currentExp);
+    const bonus = weeklyBonus();
 
     const errors = [];
     let expError = false;
@@ -636,6 +746,7 @@
     if (!(hoursPerDay > 0 && hoursPerDay <= 24)) errors.push(t("errHours"));
     if (!(tickMinutes > 0)) errors.push(t("errTick"));
     if (!(parseNum(state.silverPerHour) >= 0)) errors.push(t("errSilver"));
+    if (state.bonusOn && !bonus.valid) errors.push(t("errBonus"));
 
     let expPerTick;
     if (state.tickSource === "tick") {
@@ -665,31 +776,45 @@
       currentExp = Math.floor(expInput);
     }
 
-    if (errors.length) return { errors, expError, level, firstReq, currentExp };
+    if (errors.length) return { errors, expError, level, firstReq, currentExp, bonus };
 
     const effectiveBoost = (expPerTick / baseExp - 1) * 100;
+    const bonusActive = !!state.bonusOn && bonus.total > 0;
 
     const rows = [];
-    let cumDelta = 0;
-    let prevCumTicks = 0;
+    let totalDelta = 0;
     for (let lv = level; lv < MAX_LEVEL; lv++) {
       const req = costOf(lv);
       const delta = lv === level ? req - currentExp : req;
-      cumDelta += delta;
-      // จำนวน tick = ceil(EXP ÷ EXP ต่อ tick) นับแบบสะสม เพื่อให้ EXP ส่วนเกินยกไปเลเวลถัดไป
-      const cumTicks = Math.ceil(cumDelta / expPerTick);
-      const ticks = cumTicks - prevCumTicks;
-      prevCumTicks = cumTicks;
-      rows.push({
-        from: lv,
-        to: lv + 1,
-        req,
-        delta,
-        ticks,
-        minutes: ticks * tickMinutes,
-        cumMinutes: cumTicks * tickMinutes,
-      });
+      totalDelta += delta;
+      rows.push({ from: lv, to: lv + 1, req, delta });
     }
+
+    // ไทม์ไลน์ของการเทรนวันละ hpd ชม.: EXP เสริมรายสัปดาห์ถูกเฉลี่ยลงในทุกนาทีที่เทรน
+    // (คัมภีร์ใช้ได้ตั้งแต่ Lv 60) แล้วนับเวลาแบบสะสมเป็นจำนวน tick (ปัดขึ้น)
+    // คืนค่าเป็นนาทีที่เทรนจริง ต่อเลเวลและสะสม
+    const timeline = (hpd, withBonus) => {
+      const weekMin = hpd * 60 * 7;
+      let cumMin = 0;
+      let prevTicks = 0;
+      return rows.map((row) => {
+        const weekly = withBonus ? bonus.hunt + (row.from >= SCROLL_MIN_LEVEL ? bonus.scroll : 0) : 0;
+        const perMin = expPerTick / tickMinutes + weekly / weekMin;
+        cumMin += row.delta / perMin;
+        const cumTicks = Math.ceil(cumMin / tickMinutes - 1e-9);
+        const ticks = cumTicks - prevTicks;
+        prevTicks = cumTicks;
+        return { ticks, minutes: ticks * tickMinutes, cumMinutes: cumTicks * tickMinutes };
+      });
+    };
+
+    const t24 = timeline(24, bonusActive);
+    const tLim = timeline(hoursPerDay, bonusActive);
+    const last = (tl) => tl[tl.length - 1];
+    rows.forEach((row, i) => {
+      row.t24 = t24[i];
+      row.tLim = tLim[i];
+    });
 
     return {
       errors,
@@ -700,10 +825,16 @@
       effectiveBoost,
       hoursPerDay,
       tickMinutes,
+      bonus,
+      bonusActive,
       rows,
-      totalDelta: cumDelta,
-      totalTicks: prevCumTicks,
-      totalMinutes: prevCumTicks * tickMinutes,
+      totalDelta,
+      total24: last(t24).cumMinutes,
+      totalLim: last(tLim).cumMinutes,
+      ticksLim: last(tLim).cumMinutes / tickMinutes,
+      // เวลาเมื่อเทรนหุ่นฟางอย่างเดียว ใช้บอกว่า EXP เสริมช่วยให้เร็วขึ้นเท่าไร
+      base24: bonusActive ? last(timeline(24, false)).cumMinutes : null,
+      baseLim: bonusActive ? last(timeline(hoursPerDay, false)).cumMinutes : null,
     };
   }
 
@@ -736,6 +867,9 @@
     });
     el.subtitle.textContent = t("subtitle", { max: MAX_LEVEL });
     el.expRemainingLabel.textContent = t("expRemaining", { max: MAX_LEVEL });
+    SCROLLS.forEach((s) => {
+      el[`${s.key}Hint`].textContent = t("scrollExpHint", { n: fmtCompact(scrollExp(s)) });
+    });
     setSeg(el.langBtns, "lang", lang);
   }
 
@@ -743,7 +877,7 @@
     const levels = selectableLevels();
     el.level.innerHTML = levels.map((lv) => `<option value="${lv}">Lv ${lv}</option>`).join("");
     if (!levels.includes(Number(state.level)) && levels.length) {
-      // เลเวลเดิมไม่มีข้อมูลในโหมดนี้ — เลือกเลเวลที่ใกล้ที่สุด
+      // เลเวลเดิมไม่มีข้อมูล — เลือกเลเวลที่ใกล้ที่สุด
       const cur = Number(state.level);
       state.level = levels.reduce((a, b) => (Math.abs(b - cur) < Math.abs(a - cur) ? b : a));
     }
@@ -759,11 +893,41 @@
       el.dur24Days, el.durLimDays, el.dur24Hours, el.durLimHours]
       .forEach((n) => { n.textContent = "–"; });
     el.nextLevelFoot.textContent = el.dur24Rest.textContent = el.durLimRest.textContent = "";
+    el.dur24Save.hidden = el.durLimSave.hidden = true;
     el.progressFill.style.width = "0%";
     el.silverValue.textContent = "–";
     el.silverFoot.textContent = "";
     el.tbody.innerHTML = "";
     el.tfoot.innerHTML = "";
+  }
+
+  // แถบสรุปของการ์ด EXP เสริม
+  function renderBonusSummary(r, perHour) {
+    el.bonusCard.classList.toggle("is-off", !state.bonusOn);
+    const b = r.bonus;
+    if (!state.bonusOn) {
+      el.bonusSummary.textContent = t("bonusOff");
+      return;
+    }
+    if (!b.valid) {
+      el.bonusSummary.textContent = "";
+      return;
+    }
+    if (b.total <= 0) {
+      el.bonusSummary.textContent = t("bonusEmpty");
+      return;
+    }
+    const parts = [`<b>${t("bonusTotal", { n: fmtCompact(b.total) })}</b>`];
+    if (perHour > 0) parts.push(t("bonusEq", { v: fmtHoursOnly((b.total / perHour) * 60) }));
+    if (r.firstReq) parts.push(t("bonusPct", { p: fmtPct((b.total / r.firstReq) * 100), lv: r.level }));
+    if (b.scroll > 0 && r.level < SCROLL_MIN_LEVEL) parts.push(t("scrollFrom60"));
+    el.bonusSummary.innerHTML = parts.join(" · ");
+  }
+
+  function renderSaved(node, baseMin, totalMin, hpd) {
+    const saved = baseMin == null ? 0 : baseMin - totalMin;
+    node.hidden = !(saved > 0);
+    if (saved > 0) node.textContent = t("savedBy", { v: fmtDuration(saved, hpd) });
   }
 
   function render() {
@@ -781,6 +945,8 @@
     const silverRateLabel = parseNum(state.silverPerHour);
     el.silverLabel.textContent = t("silverCost", { r: silverRateLabel >= 0 ? fmtCompact(silverRateLabel) : "–" });
     el.nextLevelLabel.textContent = t("nextLevel", { n: level + 1, h: hpdLabel });
+    const hunt = parseNum(state.huntExp);
+    el.huntHint.textContent = hunt > 0 ? t("huntHint", { n: fmtCompact(hunt) }) : "";
 
     if (r.firstReq) {
       el.expHint.textContent = state.expUnit === "pct"
@@ -803,6 +969,7 @@
       el.error.hidden = false;
       el.error.textContent = r.errors.join(" · ");
       el.boostHint.textContent = "";
+      renderBonusSummary(r, 0);
       clearResults();
       return;
     }
@@ -813,8 +980,9 @@
     el.boostHint.textContent = state.tickSource === "tick"
       ? t("tickHint", { n: nf2.format(r.effectiveBoost - HIDDEN_BUFF) })
       : t("boostHint", { n: nf.format(Math.round(r.expPerTick)) });
+    renderBonusSummary(r, perHour);
 
-    // ความคืบหน้าในเลเวลปัจจุบัน
+    // ความคืบหน้าในเลเวลปัจจุบัน (% ต่อ tick / ชม. คิดจากหุ่นฟางอย่างเดียว)
     const curPct = (r.currentExp / r.firstReq) * 100;
     el.levelPct.textContent = `${nf3.format(curPct)}%`;
     el.progressFill.style.width = `${Math.min(100, curPct)}%`;
@@ -822,43 +990,46 @@
     el.pctPerTick.textContent = `+${fmtPct((r.expPerTick / r.firstReq) * 100)}%`;
     el.pctPerHour.textContent = `+${fmtPct((perHour / r.firstReq) * 100)}%`;
     const first = r.rows[0];
-    el.nextLevelTime.textContent = fmtDaysHM(first.minutes, r.hoursPerDay);
-    el.nextLevelFoot.textContent = t("nextFoot", { v: fmtDaysHM(first.minutes, 24) });
+    el.nextLevelTime.textContent = fmtDaysHM(first.tLim.minutes, r.hoursPerDay);
+    el.nextLevelFoot.textContent = t("nextFoot", { v: fmtDaysHM(first.t24.minutes, 24) });
 
     el.totalDelta.textContent = nf.format(r.totalDelta);
-    el.totalTicks.textContent = t("ticks", { n: nf.format(r.totalTicks) });
+    el.totalTicks.textContent = t("ticks", { n: nf.format(r.ticksLim) });
     el.perHour.textContent = t("perHour", { n: nf.format(Math.round(perHour)) });
 
-    // ค่า Silver = ชั่วโมงเทรนรวม × Silver ต่อชั่วโมง
+    // ค่า Silver = ชั่วโมงเทรนรวม (วันละ N ชม.) × Silver ต่อชั่วโมง
     const silverRate = parseNum(state.silverPerHour);
-    const silver = (r.totalMinutes / 60) * silverRate;
+    const silver = (r.totalLim / 60) * silverRate;
     el.silverValue.textContent = fmtCompact(silver);
     el.silverFoot.textContent = `${nf.format(Math.round(silver))} Silver`;
 
-    renderDuration(el.dur24Main, el.dur24Rest, r.totalMinutes, 24);
-    el.dur24Finish.textContent = df.format(new Date(Date.now() + r.totalMinutes * 60000));
-    el.dur24Days.textContent = fmtDaysHM(r.totalMinutes, 24);
-    el.dur24Hours.textContent = fmtHM(r.totalMinutes);
+    renderDuration(el.dur24Main, el.dur24Rest, r.total24, 24);
+    renderSaved(el.dur24Save, r.base24, r.total24, 24);
+    el.dur24Finish.textContent = df.format(new Date(Date.now() + r.total24 * 60000));
+    el.dur24Days.textContent = fmtDaysHM(r.total24, 24);
+    el.dur24Hours.textContent = fmtHM(r.total24);
 
-    renderDuration(el.durLimMain, el.durLimRest, r.totalMinutes, r.hoursPerDay);
-    el.durLimFinish.textContent = df.format(finishDate(r.totalMinutes, r.hoursPerDay));
-    el.durLimDays.textContent = fmtDaysHM(r.totalMinutes, r.hoursPerDay);
-    el.durLimHours.textContent = fmtHM(r.totalMinutes);
+    renderDuration(el.durLimMain, el.durLimRest, r.totalLim, r.hoursPerDay);
+    renderSaved(el.durLimSave, r.baseLim, r.totalLim, r.hoursPerDay);
+    el.durLimFinish.textContent = df.format(finishDate(r.totalLim, r.hoursPerDay));
+    el.durLimDays.textContent = fmtDaysHM(r.totalLim, r.hoursPerDay);
+    el.durLimHours.textContent = fmtHM(r.totalLim);
 
     const minPerDay = r.hoursPerDay * 60;
-    const daysLimited = Math.floor(r.totalMinutes / minPerDay);
+    const daysLimited = Math.floor(r.totalLim / minPerDay);
     el.tbody.innerHTML = r.rows
       .map((row) => {
         // เริ่มนับปฏิทินของแต่ละเลเวลจากวันที่เลเวลก่อนหน้าจบ
-        const prevMin = row.cumMinutes - row.minutes;
+        const prev24 = row.t24.cumMinutes - row.t24.minutes;
+        const prevLim = row.tLim.cumMinutes - row.tLim.minutes;
         return `
         <tr>
           <td class="lv">${row.from}<span class="arrow">›</span>${row.to}</td>
           <td class="num">${nf.format(row.delta)}${row.delta !== row.req ? `<span class="sub-cell">${t("fromReq", { n: nf.format(row.req) })}</span>` : ""}</td>
           <td class="num rate">+${fmtPct((perHour / row.req) * 100)}%<span class="sub-cell">${t("perTickShort", { n: `+${fmtPct((r.expPerTick / row.req) * 100)}%` })}</span></td>
-          <td class="num">${durHtml(row.minutes, 24, Math.floor(prevMin / 1440))}<span class="sub-cell">${row.minutes >= 1440 ? `${fmtHoursOnly(row.minutes)} · ` : ""}${t("ticks", { n: nf.format(row.ticks) })}</span></td>
-          <td class="num">${durHtml(row.minutes, r.hoursPerDay, Math.floor(prevMin / minPerDay))}</td>
-          <td class="num">${durHtml(row.cumMinutes, r.hoursPerDay)}</td>
+          <td class="num">${durHtml(row.t24.minutes, 24, Math.floor(prev24 / 1440))}<span class="sub-cell">${row.t24.minutes >= 1440 ? `${fmtHoursOnly(row.t24.minutes)} · ` : ""}${t("ticks", { n: nf.format(row.t24.ticks) })}</span></td>
+          <td class="num">${durHtml(row.tLim.minutes, r.hoursPerDay, Math.floor(prevLim / minPerDay))}</td>
+          <td class="num">${durHtml(row.tLim.cumMinutes, r.hoursPerDay)}</td>
         </tr>`;
       })
       .join("");
@@ -868,8 +1039,8 @@
         <td>${t("totalRow", { a: r.level, b: MAX_LEVEL })}</td>
         <td class="num">${nf.format(r.totalDelta)}</td>
         <td class="num"></td>
-        <td class="num">${durHtml(r.totalMinutes, 24)}<span class="sub-cell">${fmtHoursOnly(r.totalMinutes)}</span></td>
-        <td class="num">${durHtml(r.totalMinutes, r.hoursPerDay)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
+        <td class="num">${durHtml(r.total24, 24)}<span class="sub-cell">${fmtHoursOnly(r.total24)}</span></td>
+        <td class="num">${durHtml(r.totalLim, r.hoursPerDay)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
         <td class="num"></td>
       </tr>`;
   }
@@ -891,15 +1062,44 @@
   }
 
   // ---------- inputs ----------
+  // ใส่ comma ให้ตัวเลข (เก็บทศนิยมไว้ตามที่พิมพ์) เช่น "1000000.5" → "1,000,000.5"
+  function withCommas(str) {
+    const clean = String(str ?? "").replace(/[^\d.]/g, "");
+    if (clean === "") return "";
+    const dot = clean.indexOf(".");
+    const int = (dot < 0 ? clean : clean.slice(0, dot)).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return dot < 0 ? int : `${int}.${clean.slice(dot + 1).replace(/\./g, "")}`;
+  }
+
+  // จัดรูปแบบช่องตัวเลขระหว่างพิมพ์ โดยให้เคอร์เซอร์อยู่หลังตัวเลขตัวเดิม
+  function formatLive(input) {
+    const pos = input.selectionStart ?? input.value.length;
+    const digitsBefore = input.value.slice(0, pos).replace(/[^\d.]/g, "").length;
+    const next = withCommas(input.value);
+    if (next === input.value) return;
+    input.value = next;
+    let caret = 0;
+    for (let seen = 0; caret < next.length && seen < digitsBefore; caret++) {
+      if (/[\d.]/.test(next[caret])) seen++;
+    }
+    input.setSelectionRange(caret, caret);
+  }
+
+  // ช่องที่แสดง comma แบบ realtime
+  const LIVE_KEYS = ["currentExp", "tickExp", "huntExp", "baseExp", "silverPerHour", ...SCROLLS.map((s) => s.key)];
+
   function syncInputs() {
     el.level.value = String(state.level);
-    el.currentExp.value = state.currentExp;
+    el.currentExp.value = withCommas(state.currentExp);
     el.boost.value = state.boost;
     el.tickExp.value = state.tickExp === "" ? "" : nf.format(parseNum(state.tickExp));
     el.hoursPerDay.value = state.hoursPerDay;
-    el.baseExp.value = state.baseExp;
+    el.baseExp.value = withCommas(state.baseExp);
     el.tickMinutes.value = state.tickMinutes;
-    el.silverPerHour.value = state.silverPerHour;
+    el.silverPerHour.value = withCommas(state.silverPerHour);
+    el.bonusOn.checked = !!state.bonusOn;
+    SCROLLS.forEach((s) => { el[s.key].value = withCommas(state[s.key]); });
+    el.huntExp.value = withCommas(state.huntExp);
     setSeg(el.unitBtns, "unit", state.expUnit);
     el.currentExp.placeholder = state.expUnit === "pct" ? "0.00" : "0";
   }
@@ -932,9 +1132,10 @@
       update();
     });
 
-    ["currentExp", "hoursPerDay", "tickMinutes", "silverPerHour"].forEach((key) => {
+    ["currentExp", "hoursPerDay", "tickMinutes", "silverPerHour", "huntExp", ...SCROLLS.map((s) => s.key)].forEach((key) => {
       el[key].addEventListener("input", () => {
-        state[key] = el[key].value;
+        if (LIVE_KEYS.includes(key)) formatLive(el[key]);
+        state[key] = el[key].value.replace(/,/g, "");
         update();
       });
     });
@@ -946,6 +1147,7 @@
     });
 
     el.tickExp.addEventListener("input", () => {
+      formatLive(el.tickExp);
       state.tickExp = el.tickExp.value.replace(/[,\s]/g, "");
       state.tickSource = "tick";
       update();
@@ -959,7 +1161,8 @@
     el.boost.addEventListener("blur", () => { el.boost.value = state.boost; });
 
     el.baseExp.addEventListener("input", () => {
-      state.baseExp = el.baseExp.value;
+      formatLive(el.baseExp);
+      state.baseExp = el.baseExp.value.replace(/,/g, "");
       update();
     });
 
@@ -1012,6 +1215,11 @@
       if (!span) return;
       const showFull = span.textContent === span.dataset.short;
       span.textContent = showFull ? span.dataset.full : span.dataset.short;
+    });
+
+    el.bonusOn.addEventListener("change", () => {
+      state.bonusOn = el.bonusOn.checked;
+      update();
     });
 
     el.shareBtn.addEventListener("click", share);
