@@ -167,6 +167,14 @@
       errEffective: "Boost รวมต้องมากกว่า −100%",
       errTickExp: "EXP ต่อ tick ต้องมากกว่า 0",
       errHours: "ชั่วโมงต่อวันต้องอยู่ระหว่าง 0–24",
+      errNoTrainingBonus: "ถ้าไม่ตีหุ่น (0 ชม.) ต้องเปิดและกรอก EXP เสริมรายสัปดาห์",
+      errNoGain: "คัมภีร์ใช้ได้ตั้งแต่ Lv 60 — ถ้าไม่ตีหุ่น ช่วงก่อน Lv 60 ต้องมี EXP จากล่ามอนส์เตอร์",
+      noTraining: "ไม่ตีหุ่น — EXP เสริมอย่างเดียว",
+      thLimitedNone: "เวลาจริง (ไม่ตีหุ่น)",
+      thCumulativeNone: "สะสม (ไม่ตีหุ่น)",
+      nextLevelNone: "ถึง Lv {n} (ไม่ตีหุ่น)",
+      noTrainingHint: "0 = ไม่ตีหุ่น คิดจาก EXP เสริมรายสัปดาห์อย่างเดียว",
+      noTrainingHours: "ไม่ได้เทรน",
       errBase: "Base EXP ต้องมากกว่า 0",
       errTick: "นาทีต่อ tick ต้องมากกว่า 0",
       errExp: "EXP ปัจจุบันต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป",
@@ -279,6 +287,14 @@
       errEffective: "Total boost must be greater than −100%",
       errTickExp: "EXP per tick must be greater than 0",
       errHours: "Hours per day must be between 0 and 24",
+      errNoTrainingBonus: "With 0 training hours, turn on and fill in weekly bonus EXP",
+      errNoGain: "Scrolls work from Lv 60 — without training you need hunting EXP for levels below 60",
+      noTraining: "No training — bonus EXP only",
+      thLimitedNone: "Actual (no training)",
+      thCumulativeNone: "Cumulative (no training)",
+      nextLevelNone: "To Lv {n} (no training)",
+      noTrainingHint: "0 = no scarecrow, weekly bonus EXP only",
+      noTrainingHours: "No training",
       errBase: "Base EXP must be greater than 0",
       errTick: "Minutes per tick must be greater than 0",
       errExp: "Current EXP must be a number ≥ 0",
@@ -743,7 +759,7 @@
     const firstReq = costOf(level) || 0;
     if (!selectableLevels().includes(level)) errors.push(t("errLevel"));
     if (!(baseExp > 0)) errors.push(t("errBase"));
-    if (!(hoursPerDay > 0 && hoursPerDay <= 24)) errors.push(t("errHours"));
+    if (!(hoursPerDay >= 0 && hoursPerDay <= 24)) errors.push(t("errHours"));
     if (!(tickMinutes > 0)) errors.push(t("errTick"));
     if (!(parseNum(state.silverPerHour) >= 0)) errors.push(t("errSilver"));
     if (state.bonusOn && !bonus.valid) errors.push(t("errBonus"));
@@ -793,7 +809,20 @@
     // ไทม์ไลน์ของการเทรนวันละ hpd ชม.: EXP เสริมรายสัปดาห์ถูกเฉลี่ยลงในทุกนาทีที่เทรน
     // (คัมภีร์ใช้ได้ตั้งแต่ Lv 60) แล้วนับเวลาแบบสะสมเป็นจำนวน tick (ปัดขึ้น)
     // คืนค่าเป็นนาทีที่เทรนจริง ต่อเลเวลและสะสม
+    // hpd = 0 (ไม่ตีหุ่น): นับเป็นนาทีตามปฏิทินจาก EXP เสริมอย่างเดียว ไม่มี tick
     const timeline = (hpd, withBonus) => {
+      if (hpd === 0) {
+        let cum = 0;
+        let prev = 0;
+        return rows.map((row) => {
+          const weekly = bonus.hunt + (row.from >= SCROLL_MIN_LEVEL ? bonus.scroll : 0);
+          cum += row.delta / (weekly / (7 * 1440));
+          const cumMinutes = Math.ceil(cum - 1e-9);
+          const minutes = cumMinutes - prev;
+          prev = cumMinutes;
+          return { ticks: 0, minutes, cumMinutes };
+        });
+      }
       const weekMin = hpd * 60 * 7;
       let cumMin = 0;
       let prevTicks = 0;
@@ -807,6 +836,14 @@
         return { ticks, minutes: ticks * tickMinutes, cumMinutes: cumTicks * tickMinutes };
       });
     };
+
+    const noTraining = hoursPerDay === 0;
+    if (noTraining) {
+      if (!bonusActive) return { errors: [t("errNoTrainingBonus")], level, firstReq, currentExp, bonus };
+      if (rows.some((row) => bonus.hunt + (row.from >= SCROLL_MIN_LEVEL ? bonus.scroll : 0) <= 0)) {
+        return { errors: [t("errNoGain")], level, firstReq, currentExp, bonus };
+      }
+    }
 
     const t24 = timeline(24, bonusActive);
     const tLim = timeline(hoursPerDay, bonusActive);
@@ -834,7 +871,10 @@
       ticksLim: last(tLim).cumMinutes / tickMinutes,
       // เวลาเมื่อเทรนหุ่นฟางอย่างเดียว ใช้บอกว่า EXP เสริมช่วยให้เร็วขึ้นเท่าไร
       base24: bonusActive ? last(timeline(24, false)).cumMinutes : null,
-      baseLim: bonusActive ? last(timeline(hoursPerDay, false)).cumMinutes : null,
+      baseLim: bonusActive && !noTraining ? last(timeline(hoursPerDay, false)).cumMinutes : null,
+      noTraining,
+      // ชั่วโมงต่อวันที่ใช้แปลงไทม์ไลน์ของการ์ด "วันละ N ชม." เป็นวัน (ไม่ตีหุ่น = นาทีตามปฏิทิน)
+      limHpd: noTraining ? 24 : hoursPerDay,
     };
   }
 
@@ -933,18 +973,21 @@
   function render() {
     const r = compute();
     const hpd = parseNum(state.hoursPerDay);
-    const hpdLabel = hpd > 0 ? nf2.format(hpd) : "–";
+    const hpdLabel = hpd >= 0 ? nf2.format(hpd) : "–";
+    const noTrain = hpd === 0;
     const tickMin = parseNum(state.tickMinutes);
     const level = Number(state.level);
 
-    el.limitedLabel.textContent = t("limited", { h: hpdLabel });
-    el.thLimited.textContent = t("thLimited", { h: hpdLabel });
-    el.thCumulative.textContent = t("thCumulative", { h: hpdLabel });
-    el.tickEveryHint.textContent = t("tickEvery", { n: tickMin > 0 ? nf2.format(tickMin) : "–" });
+    el.limitedLabel.textContent = noTrain ? t("noTraining") : t("limited", { h: hpdLabel });
+    el.thLimited.textContent = noTrain ? t("thLimitedNone") : t("thLimited", { h: hpdLabel });
+    el.thCumulative.textContent = noTrain ? t("thCumulativeNone") : t("thCumulative", { h: hpdLabel });
+    el.tickEveryHint.textContent = noTrain ? t("noTrainingHint") : t("tickEvery", { n: tickMin > 0 ? nf2.format(tickMin) : "–" });
     el.levelCardLabel.textContent = t("levelCard", { a: level, b: level + 1 });
     const silverRateLabel = parseNum(state.silverPerHour);
     el.silverLabel.textContent = t("silverCost", { r: silverRateLabel >= 0 ? fmtCompact(silverRateLabel) : "–" });
-    el.nextLevelLabel.textContent = t("nextLevel", { n: level + 1, h: hpdLabel });
+    el.nextLevelLabel.textContent = noTrain
+      ? t("nextLevelNone", { n: level + 1 })
+      : t("nextLevel", { n: level + 1, h: hpdLabel });
     const hunt = parseNum(state.huntExp);
     el.huntHint.textContent = hunt > 0 ? t("huntHint", { n: fmtCompact(hunt) }) : "";
 
@@ -990,16 +1033,16 @@
     el.pctPerTick.textContent = `+${fmtPct((r.expPerTick / r.firstReq) * 100)}%`;
     el.pctPerHour.textContent = `+${fmtPct((perHour / r.firstReq) * 100)}%`;
     const first = r.rows[0];
-    el.nextLevelTime.textContent = fmtDaysHM(first.tLim.minutes, r.hoursPerDay);
+    el.nextLevelTime.textContent = fmtDaysHM(first.tLim.minutes, r.limHpd);
     el.nextLevelFoot.textContent = t("nextFoot", { v: fmtDaysHM(first.t24.minutes, 24) });
 
     el.totalDelta.textContent = nf.format(r.totalDelta);
-    el.totalTicks.textContent = t("ticks", { n: nf.format(r.ticksLim) });
+    el.totalTicks.textContent = r.noTraining ? "" : t("ticks", { n: nf.format(r.ticksLim) });
     el.perHour.textContent = t("perHour", { n: nf.format(Math.round(perHour)) });
 
     // ค่า Silver = ชั่วโมงเทรนรวม (วันละ N ชม.) × Silver ต่อชั่วโมง
     const silverRate = parseNum(state.silverPerHour);
-    const silver = (r.totalLim / 60) * silverRate;
+    const silver = r.noTraining ? 0 : (r.totalLim / 60) * silverRate;
     el.silverValue.textContent = fmtCompact(silver);
     el.silverFoot.textContent = `${nf.format(Math.round(silver))} Silver`;
 
@@ -1009,13 +1052,13 @@
     el.dur24Days.textContent = fmtDaysHM(r.total24, 24);
     el.dur24Hours.textContent = fmtHM(r.total24);
 
-    renderDuration(el.durLimMain, el.durLimRest, r.totalLim, r.hoursPerDay);
-    renderSaved(el.durLimSave, r.baseLim, r.totalLim, r.hoursPerDay);
-    el.durLimFinish.textContent = df.format(finishDate(r.totalLim, r.hoursPerDay));
-    el.durLimDays.textContent = fmtDaysHM(r.totalLim, r.hoursPerDay);
-    el.durLimHours.textContent = fmtHM(r.totalLim);
+    renderDuration(el.durLimMain, el.durLimRest, r.totalLim, r.limHpd);
+    renderSaved(el.durLimSave, r.baseLim, r.totalLim, r.limHpd);
+    el.durLimFinish.textContent = df.format(finishDate(r.totalLim, r.limHpd));
+    el.durLimDays.textContent = fmtDaysHM(r.totalLim, r.limHpd);
+    el.durLimHours.textContent = r.noTraining ? t("noTrainingHours") : fmtHM(r.totalLim);
 
-    const minPerDay = r.hoursPerDay * 60;
+    const minPerDay = r.limHpd * 60;
     const daysLimited = Math.floor(r.totalLim / minPerDay);
     el.tbody.innerHTML = r.rows
       .map((row) => {
@@ -1028,8 +1071,8 @@
           <td class="num">${nf.format(row.delta)}${row.delta !== row.req ? `<span class="sub-cell">${t("fromReq", { n: nf.format(row.req) })}</span>` : ""}</td>
           <td class="num rate">+${fmtPct((perHour / row.req) * 100)}%<span class="sub-cell">${t("perTickShort", { n: `+${fmtPct((r.expPerTick / row.req) * 100)}%` })}</span></td>
           <td class="num">${durHtml(row.t24.minutes, 24, Math.floor(prev24 / 1440))}<span class="sub-cell">${row.t24.minutes >= 1440 ? `${fmtHoursOnly(row.t24.minutes)} · ` : ""}${t("ticks", { n: nf.format(row.t24.ticks) })}</span></td>
-          <td class="num">${durHtml(row.tLim.minutes, r.hoursPerDay, Math.floor(prevLim / minPerDay))}</td>
-          <td class="num">${durHtml(row.tLim.cumMinutes, r.hoursPerDay)}</td>
+          <td class="num">${durHtml(row.tLim.minutes, r.limHpd, Math.floor(prevLim / minPerDay))}</td>
+          <td class="num">${durHtml(row.tLim.cumMinutes, r.limHpd)}</td>
         </tr>`;
       })
       .join("");
@@ -1040,7 +1083,7 @@
         <td class="num">${nf.format(r.totalDelta)}</td>
         <td class="num"></td>
         <td class="num">${durHtml(r.total24, 24)}<span class="sub-cell">${fmtHoursOnly(r.total24)}</span></td>
-        <td class="num">${durHtml(r.totalLim, r.hoursPerDay)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
+        <td class="num">${durHtml(r.totalLim, r.limHpd)}<span class="sub-cell">${t("daysCount", { n: nf.format(daysLimited) })}</span></td>
         <td class="num"></td>
       </tr>`;
   }
