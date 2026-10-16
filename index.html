@@ -1,0 +1,300 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>BDO Training Planner</title>
+  <meta name="description" content="Black Desert Online — Black Spirit's Training level time calculator" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="site-header">
+    <div class="wrap">
+      <div class="title-row">
+        <h1>BDO Training Planner</h1>
+        <div class="header-actions">
+          <div class="seg" role="radiogroup" aria-label="Language">
+            <button type="button" class="seg-btn" data-lang="th">ไทย</button>
+            <button type="button" class="seg-btn" data-lang="en">EN</button>
+          </div>
+          <a class="gh-link" href="https://github.com/Jaynarol/bdo-training-planner" target="_blank" rel="noopener" aria-label="GitHub repository">
+            <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>
+            <span>GitHub</span>
+          </a>
+        </div>
+      </div>
+      <p class="sub" id="subtitle"></p>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <section class="card" aria-labelledby="inputTitle">
+      <div class="card-head">
+        <h2 id="inputTitle" data-i18n="inputTitle"></h2>
+        <div class="actions">
+          <button type="button" class="btn-ghost" id="resetBtn" data-i18n="reset"></button>
+          <button type="button" class="btn-primary" id="shareBtn">
+            <svg viewBox="0 0 24 24" width="15" height="15" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" d="M4 12v7a1 1 0 001 1h14a1 1 0 001-1v-7M16 6l-4-4-4 4M12 2v13"/></svg>
+            <span data-i18n="share"></span>
+          </button>
+        </div>
+      </div>
+
+      <div class="grid">
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="level" data-i18n="level"></label>
+            <button type="button" class="help-btn" data-help="exp" data-i18n-aria="howToFind">?</button>
+          </div>
+          <select id="level"></select>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="currentExp" data-i18n="currentExp"></label>
+            <button type="button" class="help-btn" data-help="exp" data-i18n-aria="howToFind">?</button>
+          </div>
+          <div class="input-group">
+            <input id="currentExp" type="text" inputmode="decimal" autocomplete="off" placeholder="0" />
+            <div class="seg" role="radiogroup" aria-label="EXP unit">
+              <button type="button" data-unit="pct" class="seg-btn">%</button>
+              <button type="button" data-unit="exp" class="seg-btn">EXP</button>
+            </div>
+          </div>
+          <span class="hint" id="expHint"></span>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="boost" id="boostLabel"></label>
+            <button type="button" class="help-btn" data-help="boost" data-i18n-aria="howToFind">?</button>
+          </div>
+          <div class="input-group">
+            <input id="boost" type="text" inputmode="decimal" autocomplete="off" placeholder="2675" />
+            <input id="tickExp" type="text" inputmode="numeric" autocomplete="off" hidden />
+            <div class="seg" role="radiogroup" aria-label="Boost / EXP per tick">
+              <button type="button" data-source="boost" class="seg-btn">%</button>
+              <button type="button" data-source="tick" class="seg-btn">EXP</button>
+            </div>
+          </div>
+          <span class="hint" id="boostHint"></span>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="hoursPerDay" data-i18n="hoursPerDay"></label>
+          </div>
+          <input id="hoursPerDay" type="text" inputmode="decimal" autocomplete="off" placeholder="10" />
+          <span class="hint" id="tickEveryHint"></span>
+        </div>
+      </div>
+
+      <details class="advanced">
+        <summary data-i18n="advanced"></summary>
+        <div class="grid grid-3">
+          <label class="field">
+            <span class="label" data-i18n="baseExp"></span>
+            <input id="baseExp" type="text" inputmode="decimal" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="label" data-i18n="tickMinutes"></span>
+            <input id="tickMinutes" type="text" inputmode="decimal" autocomplete="off" />
+          </label>
+          <label class="field">
+            <span class="label" data-i18n="silverPerHour"></span>
+            <input id="silverPerHour" type="text" inputmode="numeric" autocomplete="off" />
+          </label>
+        </div>
+        <p class="note" data-i18n="formula"></p>
+
+      </details>
+    </section>
+
+    <section class="card bonus-card" id="bonusCard" aria-labelledby="bonusTitle">
+      <div class="card-head">
+        <div class="head-title">
+          <h2 id="bonusTitle" data-i18n="bonusTitle"></h2>
+          <p class="card-sub" data-i18n="bonusSub"></p>
+        </div>
+        <label class="switch">
+          <input type="checkbox" id="bonusOn" role="switch" />
+          <span class="switch-track" aria-hidden="true"></span>
+          <span class="switch-label" data-i18n="bonusUse"></span>
+        </label>
+      </div>
+
+      <div class="bonus-body">
+        <div class="field">
+          <div class="label-row">
+            <span class="label" data-i18n="scrollsLabel"></span>
+            <button type="button" class="help-btn" data-help="scroll" data-i18n-aria="howToFind">?</button>
+          </div>
+          <div class="scroll-grid">
+            <label class="scroll-field">
+              <span class="scroll-size">S <em>0.2%</em></span>
+              <input id="scrollS" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollSHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">M <em>1%</em></span>
+              <input id="scrollM" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollMHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">L <em>7.5%</em></span>
+              <input id="scrollL" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollLHint"></span>
+            </label>
+            <label class="scroll-field">
+              <span class="scroll-size">XL <em>15%</em></span>
+              <input id="scrollXL" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+              <span class="hint" id="scrollXLHint"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <div class="label-row">
+            <label class="label" for="huntExp" data-i18n="huntLabel"></label>
+            <button type="button" class="help-btn" data-help="hunt" data-i18n-aria="howToFind">?</button>
+          </div>
+          <span class="scroll-size" aria-hidden="true">&nbsp;</span>
+          <input id="huntExp" type="text" inputmode="numeric" autocomplete="off" placeholder="0" />
+          <span class="hint" id="huntHint"></span>
+        </div>
+      </div>
+
+      <p class="bonus-summary" id="bonusSummary"></p>
+    </section>
+
+    <p class="error" id="error" role="alert" hidden></p>
+
+    <section class="summary" id="summary" aria-live="polite">
+      <div class="top-cards">
+        <div class="card level-card">
+          <div class="level-head">
+            <span class="label" id="levelCardLabel"></span>
+            <span class="level-pct" id="levelPct">–</span>
+          </div>
+          <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" id="progress">
+            <div class="progress-fill" id="progressFill"></div>
+          </div>
+          <div class="mini-stats">
+            <div class="mini">
+              <span class="mini-label" data-i18n="pctPerTick"></span>
+              <span class="mini-value" id="pctPerTick">–</span>
+            </div>
+            <div class="mini">
+              <span class="mini-label" data-i18n="pctPerHour"></span>
+              <span class="mini-value" id="pctPerHour">–</span>
+            </div>
+            <div class="mini">
+              <span class="mini-label" id="nextLevelLabel"></span>
+              <span class="mini-value" id="nextLevelTime">–</span>
+              <span class="mini-foot" id="nextLevelFoot"></span>
+            </div>
+          </div>
+        </div>
+
+        <div class="card exp-card">
+          <span class="label" id="expRemainingLabel"></span>
+          <span class="exp-value" id="totalDelta">–</span>
+          <div class="exp-meta">
+            <span id="totalTicks"></span>
+            <span id="perHour"></span>
+          </div>
+          <div class="silver">
+            <span class="label" id="silverLabel"></span>
+            <div class="silver-row">
+              <span class="silver-value" id="silverValue">–</span>
+              <span class="silver-foot" id="silverFoot"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="durations">
+        <article class="card dur">
+          <h3 class="dur-label" data-i18n="continuous"></h3>
+          <div class="dur-main" id="dur24Main">–</div>
+          <div class="dur-rest" id="dur24Rest"></div>
+          <div class="dur-save" id="dur24Save" hidden></div>
+          <dl class="dur-meta">
+            <div><dt data-i18n="finishOn"></dt><dd id="dur24Finish">–</dd></div>
+            <div><dt data-i18n="inDays"></dt><dd id="dur24Days">–</dd></div>
+            <div><dt data-i18n="totalHours"></dt><dd id="dur24Hours">–</dd></div>
+          </dl>
+        </article>
+
+        <article class="card dur accent">
+          <h3 class="dur-label" id="limitedLabel"></h3>
+          <div class="dur-main" id="durLimMain">–</div>
+          <div class="dur-rest" id="durLimRest"></div>
+          <div class="dur-save" id="durLimSave" hidden></div>
+          <dl class="dur-meta">
+            <div><dt data-i18n="finishOn"></dt><dd id="durLimFinish">–</dd></div>
+            <div><dt data-i18n="inDays"></dt><dd id="durLimDays">–</dd></div>
+            <div><dt data-i18n="totalHours"></dt><dd id="durLimHours">–</dd></div>
+          </dl>
+        </article>
+      </div>
+    </section>
+
+    <section class="card" aria-labelledby="tableTitle">
+      <div class="card-head">
+        <h2 id="tableTitle" data-i18n="tableTitle"></h2>
+      </div>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th data-i18n="thLevel"></th>
+              <th class="num" data-i18n="thDelta"></th>
+              <th class="num" data-i18n="thRate"></th>
+              <th class="num" data-i18n="thTime24"></th>
+              <th class="num" id="thLimited"></th>
+              <th class="num" id="thCumulative"></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+          <tfoot id="tfoot"></tfoot>
+        </table>
+      </div>
+    </section>
+
+    <details class="card ref">
+      <summary><h2 data-i18n="refTitle"></h2></summary>
+      <p class="note" data-i18n="refNote"></p>
+      <div class="table-scroll">
+        <table>
+          <thead><tr><th data-i18n="thLevel"></th><th data-i18n="thStep"></th><th class="num">EXP Required</th></tr></thead>
+          <tbody id="refBody"></tbody>
+        </table>
+      </div>
+    </details>
+  </main>
+
+  <footer class="wrap site-footer">
+    <p><span data-i18n="madeBy"></span> <a href="https://github.com/Jaynarol" target="_blank" rel="noopener">Jaynarol</a> · <a href="https://github.com/Jaynarol/bdo-training-planner" target="_blank" rel="noopener">GitHub</a></p>
+    <p data-i18n="storageNote"></p>
+  </footer>
+
+  <dialog class="help-dialog" id="helpDialog" aria-labelledby="helpTitle">
+    <div class="help-head">
+      <h2 id="helpTitle"></h2>
+      <button type="button" class="icon-btn" id="helpClose" data-i18n-aria="close">
+        <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>
+      </button>
+    </div>
+    <ol class="help-steps" id="helpSteps"></ol>
+    <img class="help-img" id="helpImg" alt="" />
+  </dialog>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+  <script src="app.js"></script>
+</body>
+</html>
