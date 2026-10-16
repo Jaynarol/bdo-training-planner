@@ -33,10 +33,11 @@
   const STORAGE_KEY = "bdo-training-planner:v1";
   const LANG_KEY = "bdo-training-planner:lang";
 
-  // Base EXP ต่อ tick ที่ Boost 0% (วัดจากเกม: 6,228,198 ÷ 28.75)
-  const BASE_EXP = "216632.965879";
-  // บัฟแฝงที่ไม่แสดงในหน้าต่างสถานะ — มีอยู่ 100% เสมอ (ในเกมเห็น 2675% แต่ได้จริงเท่า 2775%)
-  const HIDDEN_BUFF = 100;
+  // EXP ต่อ tick ที่ Boost ต่อสู้ 100% — ค่า Boost ในเกมคืออัตรารวมแล้ว (2675% = 26.75 เท่า)
+  // วัดจากเกม: 6,228,198 ÷ 26.75 (Lv 63) และ 5,513,539 ÷ 23.68 (Lv 64) ≈ 232,832
+  const BASE_EXP = "232832";
+  // ค่า Base เดิม (สูตรบัฟแฝง 100%) — ถ้ายังค้างอยู่ใน localStorage ให้เปลี่ยนเป็นค่าใหม่
+  const OLD_BASE_EXP = "216632.965879";
 
   // คัมภีร์ลับต่อสู้: EXP ต่อเล่มคิดตามมาตรฐานเลเวล 66 (% ของหลอด Lv 66) — เป็นค่าคงที่ทุกเลเวล
   const SCROLL_BASE_LEVEL = 66;
@@ -106,7 +107,7 @@
       boostHint: "≈ {n} EXP ต่อ tick",
       tickHint: "≈ Boost (ต่อสู้) {n}%",
       advanced: "ตั้งค่าขั้นสูง",
-      baseExp: "Base EXP ต่อ tick (Boost 0%)",
+      baseExp: "EXP ต่อ tick ที่ Boost 100%",
       tickMinutes: "นาทีต่อ 1 tick",
       silverPerHour: "Silver ที่ใช้ต่อชั่วโมง",
       silverCost: "Silver ที่ต้องใช้ (ชม. ละ {r})",
@@ -128,7 +129,7 @@
       bonusEmpty: "ยังไม่ได้กรอก — ผลลัพธ์ด้านล่างคิดจากหุ่นฟางอย่างเดียว",
       savedBy: "เร็วขึ้น {v} ด้วย EXP เสริม",
       errBonus: "จำนวนคัมภีร์และ EXP ล่ามอนส์เตอร์ต้องเป็นตัวเลขตั้งแต่ 0 ขึ้นไป",
-      formula: "สูตร: EXP ต่อ tick = round(Base × (1 + (Boost + 100) ÷ 100)) — รวมบัฟแฝง 100% ที่ไม่แสดงในเกมให้แล้ว · แก้ Base ได้เผื่อย้ายที่เก็บเลเวล",
+      formula: "สูตร: EXP ต่อ tick = round(Base × Boost ÷ 100) — ค่า Boost ในเกมคืออัตรารวมแล้ว เช่น 2675% = 26.75 เท่า · แก้ Base ได้เผื่อย้ายที่เก็บเลเวล",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "จาก {b} EXP ({p}%)",
       levelCard: "ความคืบหน้า Lv {a} › {b}",
@@ -164,7 +165,7 @@
       copyPrompt: "คัดลอกลิงก์นี้",
       errLevel: "เลเวลไม่ถูกต้อง หรือไม่มีข้อมูล EXP ในโหมดตารางนี้",
       errBoost: "กรุณากรอก EXP Boost เป็นตัวเลข",
-      errEffective: "Boost รวมต้องมากกว่า −100%",
+      errEffective: "EXP Boost ต้องมากกว่า 0%",
       errTickExp: "EXP ต่อ tick ต้องมากกว่า 0",
       errHours: "ชั่วโมงต่อวันต้องอยู่ระหว่าง 0–24",
       errNoTrainingBonus: "ถ้าไม่ตีหุ่น (0 ชม.) ต้องเปิดและกรอก EXP เสริมรายสัปดาห์",
@@ -190,13 +191,13 @@
       helpBoostSteps: [
         "กดปุ่ม <kbd>P</kbd> เพื่อเปิดหน้าต่าง <b>ข้อมูลส่วนตัว</b>",
         "ไปที่แท็บสุดท้าย (ลูกศรขึ้น) <b>เพิ่มค่าประสบการณ์ทั่วไป</b>",
-        "กรอกค่าในแถว <b>ต่อสู้</b> ได้เลย (ระบบบวกบัฟแฝง 100% ที่ไม่แสดงในเกมให้เอง)",
+        "กรอกค่าในแถว <b>ต่อสู้</b> ได้เลย",
       ],
       helpHuntTitle: "ประมาณ EXP จากล่ามอนส์เตอร์",
       helpHuntSteps: [
         "เปิดหน้าต่าง <b>ข้อมูลพื้นที่ล่า</b> แล้วเลือกพื้นที่ที่ไปล่าประจำ",
         "ดูส่วน <b>ข้อมูลมอนสเตอร์</b> — ค่าประสบการณ์ที่ได้รับ คือ EXP ต่อตัว (ยังไม่รวม Boost)",
-        "คำนวณคร่าวๆ: <b>EXP ต่อตัว × จำนวนที่กำจัดต่อสัปดาห์ × (1 + EXP Boost ÷ 100)</b> เช่น 95,264 × 10,000 ตัว × 27.75 ≈ 26.4B แล้วกรอกผลรวมลงช่องนี้",
+        "คำนวณคร่าวๆ: <b>EXP ต่อตัว × จำนวนที่กำจัดต่อสัปดาห์ × (EXP Boost ÷ 100)</b> เช่น 95,264 × 10,000 ตัว × 26.75 ≈ 25.5B แล้วกรอกผลรวมลงช่องนี้",
       ],
       helpScrollTitle: "คัมภีร์ลับต่อสู้",
       helpScrollSteps: [
@@ -226,7 +227,7 @@
       boostHint: "≈ {n} EXP per tick",
       tickHint: "≈ Combat boost {n}%",
       advanced: "Advanced settings",
-      baseExp: "Base EXP per tick (0% boost)",
+      baseExp: "EXP per tick at 100% boost",
       tickMinutes: "Minutes per tick",
       silverPerHour: "Silver cost per hour",
       silverCost: "Silver needed ({r} / hr)",
@@ -248,7 +249,7 @@
       bonusEmpty: "Nothing entered — results below use scarecrow training only",
       savedBy: "{v} faster with bonus EXP",
       errBonus: "Scroll counts and hunting EXP must be numbers ≥ 0",
-      formula: "Formula: EXP per tick = round(Base × (1 + (Boost + 100) ÷ 100)) — includes the hidden 100% buff not shown in game · change Base if you train somewhere else",
+      formula: "Formula: EXP per tick = round(Base × Boost ÷ 100) — the in-game boost is already the total rate, e.g. 2675% = 26.75× · change Base if you train somewhere else",
       expHintPct: "≈ {a} / {b} EXP",
       expHintExp: "of {b} EXP ({p}%)",
       levelCard: "Progress Lv {a} › {b}",
@@ -284,7 +285,7 @@
       copyPrompt: "Copy this link",
       errLevel: "Invalid level, or no EXP data for it in this table mode",
       errBoost: "EXP Boost must be a number",
-      errEffective: "Total boost must be greater than −100%",
+      errEffective: "EXP Boost must be greater than 0%",
       errTickExp: "EXP per tick must be greater than 0",
       errHours: "Hours per day must be between 0 and 24",
       errNoTrainingBonus: "With 0 training hours, turn on and fill in weekly bonus EXP",
@@ -310,13 +311,13 @@
       helpBoostSteps: [
         "Press <kbd>P</kbd> to open the <b>Profile</b> window",
         "Open the last tab (double arrow) — <b>General EXP bonus</b>",
-        "Enter the value in the <b>Combat</b> row as-is (the hidden 100% buff not shown in game is added for you)",
+        "Enter the value in the <b>Combat</b> row as-is",
       ],
       helpHuntTitle: "Estimating monster hunting EXP",
       helpHuntSteps: [
         "Open the <b>Hunting Ground Info</b> window and pick the spot you usually grind",
         "Check <b>Monster Info</b> — the EXP shown is per kill (before boost)",
-        "Rough estimate: <b>EXP per kill × kills per week × (1 + EXP Boost ÷ 100)</b>, e.g. 95,264 × 10,000 kills × 27.75 ≈ 26.4B — enter the total here",
+        "Rough estimate: <b>EXP per kill × kills per week × (EXP Boost ÷ 100)</b>, e.g. 95,264 × 10,000 kills × 26.75 ≈ 25.5B — enter the total here",
       ],
       helpScrollTitle: "Combat secret scrolls",
       helpScrollSteps: [
@@ -438,6 +439,7 @@
         const saved = JSON.parse(raw);
         const out = {};
         for (const k of Object.keys(DEFAULTS)) if (k in saved) out[k] = saved[k];
+        if (String(out.baseExp).replace(/,/g, "") === OLD_BASE_EXP) delete out.baseExp;
         return { ...DEFAULTS, ...out };
       }
     } catch (_) { /* ignore */ }
@@ -485,23 +487,19 @@
     return Math.round(n * 100) / 100;
   }
 
-  function hiddenValue() {
-    return HIDDEN_BUFF;
-  }
-
+  // ค่า Boost ในเกมคืออัตรารวม: EXP ต่อ tick = Base × Boost ÷ 100
   function tickFromBoost() {
     const base = parseNum(state.baseExp);
-    const total = parseNum(state.boost) + hiddenValue();
-    if (!(base > 0) || !Number.isFinite(total)) return NaN;
-    return Math.round(base * (1 + total / 100));
+    const boost = parseNum(state.boost);
+    if (!(base > 0) || !Number.isFinite(boost)) return NaN;
+    return Math.round((base * boost) / 100);
   }
 
   function boostFromTick() {
     const base = parseNum(state.baseExp);
     const tick = parseNum(state.tickExp);
-    const hidden = hiddenValue();
-    if (!(base > 0) || !(tick > 0) || !Number.isFinite(hidden)) return NaN;
-    return round2((tick / base - 1) * 100 - hidden);
+    if (!(base > 0) || !(tick > 0)) return NaN;
+    return round2((tick / base) * 100);
   }
 
   // อัปเดตช่องฝั่งตรงข้ามตาม tickSource (ไม่แตะช่องที่ผู้ใช้กำลังพิมพ์)
@@ -750,7 +748,6 @@
     const baseExp = parseNum(state.baseExp);
     const tickMinutes = parseNum(state.tickMinutes);
     const boost = parseNum(state.boost);
-    const hidden = hiddenValue();
     const expInput = state.currentExp === "" ? 0 : parseNum(state.currentExp);
     const bonus = weeklyBonus();
 
@@ -770,7 +767,7 @@
       if (!(expPerTick > 0)) errors.push(t("errTickExp"));
     } else {
       if (!Number.isFinite(boost)) errors.push(t("errBoost"));
-      else if (!(boost + hidden > -100)) errors.push(t("errEffective"));
+      else if (!(boost > 0)) errors.push(t("errEffective"));
       expPerTick = tickFromBoost();
     }
 
@@ -794,7 +791,7 @@
 
     if (errors.length) return { errors, expError, level, firstReq, currentExp, bonus };
 
-    const effectiveBoost = (expPerTick / baseExp - 1) * 100;
+    const effectiveBoost = (expPerTick / baseExp) * 100;
     const bonusActive = !!state.bonusOn && bonus.total > 0;
 
     const rows = [];
@@ -1021,7 +1018,7 @@
 
     const perHour = (r.expPerTick * 60) / r.tickMinutes;
     el.boostHint.textContent = state.tickSource === "tick"
-      ? t("tickHint", { n: nf2.format(r.effectiveBoost - HIDDEN_BUFF) })
+      ? t("tickHint", { n: nf2.format(r.effectiveBoost) })
       : t("boostHint", { n: nf.format(Math.round(r.expPerTick)) });
     renderBonusSummary(r, perHour);
 
